@@ -36,6 +36,7 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt
+        working-directory: ./azure-inactive-users-function
 
       # Optional: Add step to run tests here
 
