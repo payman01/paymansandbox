@@ -1,5 +1,6 @@
 # Azure Functions Core
-azure-functions==1.18.0
+#azure-functions==1.18.0
+azure-functions
 azure-functions-worker==1.0.0
 
 # Microsoft Graph API
