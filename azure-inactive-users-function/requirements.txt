@@ -16,4 +16,7 @@ python-dateutil==2.8.2
 # Logging
 #azure-functions-logging==1.0.0
 azure-functions
+grpcio==1.33.1
+grpcio-tools==1.33.1
+
 
