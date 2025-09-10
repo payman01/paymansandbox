@@ -15,5 +15,10 @@ pandas==2.1.4
 python-dateutil==2.8.2
 
 # Logging
-azure-functions-logging==1.0.0
+#azure-functions-logging==1.0.
+
+import logging
+
+def main(req):
+    logging.info("Function triggered")
 
