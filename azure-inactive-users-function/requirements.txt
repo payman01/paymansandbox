@@ -1,16 +1,23 @@
 # Azure Functions Core
 azure-functions==1.18.0
- 
-# Microsoft Graph API (using requests instead of heavy SDK)
+azure-functions-worker==1.0.0
+
+# Microsoft Graph API
 msal==1.24.1
 requests==2.31.0
- 
-# Azure Storage (lightweight version)
+
+# Azure Storage
 azure-storage-blob==12.19.0
- 
-# Data processing (lightweight)
+
+# Data processing
 pandas==2.1.4
 python-dateutil==2.8.2
- 
-# Ensure compatible versions
-urllib3<2.0.0
+
+# Logging
+#azure-functions-logging==1.0.0
+azure-functions
+grpcio==1.20.1
+grpcio-tools==1.20.1
+protobuf<4.0.0
+
+
