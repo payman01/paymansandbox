@@ -83,3 +83,5 @@ jobs:
           app-name: 'func-inactive-users-2509101550'
           slot-name: 'Production'
           package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_557FC5B767BC487FAF17709F5E6FB720 }}
+
