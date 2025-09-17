@@ -99,3 +99,36 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# Azure Functions artifacts
+bin
+obj
+appsettings.json
+local.settings.json
+
+# Azure Functions Core Tools
+.vscode/
+.azure/
+
+# PowerShell
+*.ps1xml
+
+# Azure specific
+*.publishsettings
+*.azurePubxml
+
+# Secrets and keys
+*.key
+*.pem
+*.p12
+*.pfx
+secrets.json
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
