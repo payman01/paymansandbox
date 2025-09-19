@@ -133,11 +133,21 @@ try {
     # Create storage context
     $storageContext = New-AzStorageContext -StorageAccountName $storageAccountName -StorageAccountKey $storageAccountKey
     
-    # Convert CSV content to bytes
-    $csvBytes = [System.Text.Encoding]::UTF8.GetBytes($csvContent -join "`n")
-    
-    # Upload blob
-    $blob = Set-AzStorageBlobContent -Container $containerName -Blob $fileName -BlobType Block -Context $storageContext -Force
+    # Create temporary file for upload
+    $tempFile = [System.IO.Path]::GetTempFileName()
+    try {
+        # Write CSV content to temporary file
+        $csvContent | Out-File -FilePath $tempFile -Encoding UTF8
+        
+        # Upload blob from file
+        $blob = Set-AzStorageBlobContent -File $tempFile -Container $containerName -Blob $fileName -BlobType Block -Context $storageContext -Force
+        
+    } finally {
+        # Clean up temporary file
+        if (Test-Path $tempFile) {
+            Remove-Item $tempFile -Force
+        }
+    }
     
     if ($blob) {
         # Generate blob URL
