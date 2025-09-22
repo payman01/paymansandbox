@@ -25,7 +25,7 @@ Microsoft Graph API   Timer Trigger                        Public/Private URL
 
 #### 1.1 Create Resource Group
 ```bash
-az group create --name "rg-inactive-users-report" --location "East US"
+az group create --name "rg-inactive-users-report-Payman" --location "East US"
 ```
 
 #### 1.2 Create Storage Account
@@ -71,7 +71,7 @@ az ad app create \
 #### 2.2 Create Service Principal
 ```bash
 # Get the app ID from the previous command output
-APP_ID="your-app-id-here"
+$APP_ID="your-app-id-here"
 
 az ad sp create --id $APP_ID
 ```
@@ -118,7 +118,7 @@ az ad app permission admin-consent --id $APP_ID
 TENANT_ID=$(az account show --query tenantId -o tsv)
 
 # Get storage account key
-STORAGE_KEY=$(az storage account keys list --resource-group "rg-inactive-users-report" --account-name "stinactiveusersreport" --query "[0].value" -o tsv)
+STORAGE_KEY=$(az storage account keys list --resource-group "rg-inactive-users-report-Payman" --account-name "stinactiveusersreport" --query "[0].value" -o tsv)
 
 echo "Tenant ID: $TENANT_ID"
 echo "Storage Key: $STORAGE_KEY"

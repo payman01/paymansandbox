@@ -56,7 +56,31 @@ try {
     
     # Get all users
     Write-Log "Retrieving all users from tenant..."
-    $allUsers = Get-MgUser -All -Property "Id,DisplayName,UserPrincipalName,AccountEnabled,CreatedDateTime,SignInActivity"
+    # Get all users with expanded sign-in activity
+Write-Log "Retrieving all users from tenant with sign-in activity..."
+# Get all users with sign-in activity (without expand)
+Write-Log "Retrieving all users from tenant with sign-in activity..."
+$allUsers = Get-MgUser -All -Property "Id,DisplayName,UserPrincipalName,AccountEnabled,CreatedDateTime,SignInActivity"
+ 
+Write-Log "Found $($allUsers.Count) total users"
+ 
+# Debug: Check the first few users' sign-in activity structure
+if ($allUsers.Count -gt 0) {
+    $sampleUser = $allUsers[0]
+    if ($sampleUser.SignInActivity) {
+        Write-Log "Sample user SignInActivity structure: $($sampleUser.SignInActivity | ConvertTo-Json -Depth 3)" -Level "DEBUG"
+    } else {
+        Write-Log "Sample user has no SignInActivity data" -Level "DEBUG"
+    }
+}
+ 
+Write-Log "Found $($allUsers.Count) total users"
+ 
+# Debug: Check the first few users' sign-in activity structure
+if ($allUsers.Count -gt 0) {
+    $sampleUser = $allUsers[0]
+    Write-Log "Sample user SignInActivity structure: $($sampleUser.SignInActivity | ConvertTo-Json -Depth 3)" -Level "DEBUG"
+}
     
     Write-Log "Found $($allUsers.Count) total users"
     
@@ -67,39 +91,113 @@ try {
         $isInactive = $false
         $lastSignIn = "Never"
         $daysSinceLastSignIn = "N/A"
+        $lastSignInDate = $null
         
         if ($user.AccountEnabled -eq $false) {
             # Skip disabled accounts
             continue
         }
         
+        Write-Log "Processing user: $($user.UserPrincipalName)" -Level "DEBUG"
+        
+        # Check if SignInActivity exists and has data
         if ($user.SignInActivity) {
+            Write-Log "SignInActivity found for user: $($user.UserPrincipalName)" -Level "DEBUG"
+            
             $lastInteractiveSignIn = $user.SignInActivity.LastSignInDateTime
             $lastNonInteractiveSignIn = $user.SignInActivity.LastNonInteractiveSignInDateTime
             
-            # Get the most recent sign-in
+            Write-Log "Interactive SignIn: $lastInteractiveSignIn, Non-Interactive SignIn: $lastNonInteractiveSignIn" -Level "DEBUG"
+            
+            # Try to get the most recent sign-in
             $mostRecentSignIn = $null
-            if ($lastInteractiveSignIn -and $lastNonInteractiveSignIn) {
-                $mostRecentSignIn = if ($lastInteractiveSignIn -gt $lastNonInteractiveSignIn) { $lastInteractiveSignIn } else { $lastNonInteractiveSignIn }
-            } elseif ($lastInteractiveSignIn) {
-                $mostRecentSignIn = $lastInteractiveSignIn
-            } elseif ($lastNonInteractiveSignIn) {
-                $mostRecentSignIn = $lastNonInteractiveSignIn
+            $mostRecentSignInDate = $null
+            
+            # Parse interactive sign-in
+            if ($lastInteractiveSignIn -and $lastInteractiveSignIn -ne $null -and $lastInteractiveSignIn.ToString() -ne "" -and $lastInteractiveSignIn.ToString() -ne "-") {
+                try {
+                    if ($lastInteractiveSignIn -is [DateTime]) {
+                        $interactiveDate = $lastInteractiveSignIn
+                    } else {
+                        $interactiveDate = [DateTime]::Parse($lastInteractiveSignIn.ToString())
+                    }
+                    $mostRecentSignInDate = $interactiveDate
+                    $mostRecentSignIn = "Interactive"
+                    Write-Log "Parsed interactive sign-in: $interactiveDate" -Level "DEBUG"
+                } catch {
+                    Write-Log "Failed to parse interactive sign-in date: $lastInteractiveSignIn" -Level "WARN"
+                }
             }
             
-            if ($mostRecentSignIn) {
-                $lastSignInDate = [DateTime]::Parse($mostRecentSignIn)
+            # Parse non-interactive sign-in
+            if ($lastNonInteractiveSignIn -and $lastNonInteractiveSignIn -ne $null -and $lastNonInteractiveSignIn.ToString() -ne "" -and $lastNonInteractiveSignIn.ToString() -ne "-") {
+                try {
+                    if ($lastNonInteractiveSignIn -is [DateTime]) {
+                        $nonInteractiveDate = $lastNonInteractiveSignIn
+                    } else {
+                        $nonInteractiveDate = [DateTime]::Parse($lastNonInteractiveSignIn.ToString())
+                    }
+                    
+                    # Compare with interactive date to get the most recent
+                    if ($mostRecentSignInDate -eq $null -or $nonInteractiveDate -gt $mostRecentSignInDate) {
+                        $mostRecentSignInDate = $nonInteractiveDate
+                        $mostRecentSignIn = "Non-Interactive"
+                    }
+                    Write-Log "Parsed non-interactive sign-in: $nonInteractiveDate" -Level "DEBUG"
+                } catch {
+                    Write-Log "Failed to parse non-interactive sign-in date: $lastNonInteractiveSignIn" -Level "WARN"
+                }
+            }
+            
+            # Process the most recent sign-in
+            if ($mostRecentSignInDate -ne $null) {
+                $lastSignInDate = $mostRecentSignInDate
                 $lastSignIn = $lastSignInDate.ToString('yyyy-MM-dd HH:mm:ss')
-                $daysSinceLastSignIn = [math]::Round((Get-Date - $lastSignInDate).TotalDays)
+            # Safe date calculation with validation
+        if ($lastSignInDate -and $lastSignInDate -is [DateTime]) {
+            # Safe date calculation - prevents crashes
+        if ($lastSignInDate -ne $null -and $lastSignInDate -ne "" -and $lastSignInDate -ne "-" -and $lastSignInDate -is [DateTime]) {
+            try {
+                # Safe date calculation
+                if ($lastSignInDate -and $lastSignInDate -is [DateTime]) {
+                    try {
+                        (Get-Date - $lastSignInDate)
+                    } catch {
+                        Write-Log "Date calculation error: $($_.Exception.Message)" -Level "ERROR"
+                        [TimeSpan]::Zero
+                    }
+                } else {
+                    Write-Log "Invalid date for calculation: $lastSignInDate" -Level "WARN"
+                    [TimeSpan]::Zero
+                }
+            } catch {
+                Write-Log "Error calculating days for date: $lastSignInDate" -Level "ERROR"
+                $daysSinceLastSignIn = "N/A"
+            }
+        } else {
+            Write-Log "Invalid lastSignInDate value: '$lastSignInDate' (Type: $($lastSignInDate.GetType().Name))" -Level "WARN"
+            $daysSinceLastSignIn = "N/A"
+        }
+                } else {
+            Write-Log "Warning: Invalid lastSignInDate for calculation: $lastSignInDate" -Level "WARN"
+            $daysSinceLastSignIn = "N/A"
+        }
+                
+                Write-Log "User $($user.UserPrincipalName) last signed in: $lastSignIn ($daysSinceLastSignIn days ago)" -Level "DEBUG"
                 
                 if ($lastSignInDate -lt $cutoffDate) {
                     $isInactive = $true
+                    Write-Log "User $($user.UserPrincipalName) is inactive (last sign-in: $lastSignIn)" -Level "DEBUG"
+                } else {
+                    Write-Log "User $($user.UserPrincipalName) is active (last sign-in: $lastSignIn)" -Level "DEBUG"
                 }
             } else {
                 $isInactive = $true
+                Write-Log "User $($user.UserPrincipalName) has no valid sign-in dates" -Level "DEBUG"
             }
         } else {
             $isInactive = $true
+            Write-Log "User $($user.UserPrincipalName) has no SignInActivity data" -Level "DEBUG"
         }
         
         if ($isInactive) {
@@ -108,7 +206,17 @@ try {
                 UserPrincipalName = $user.UserPrincipalName
                 UserId = $user.Id
                 AccountEnabled = $user.AccountEnabled
-                CreatedDateTime = if ($user.CreatedDateTime) { ([DateTime]::Parse($user.CreatedDateTime)).ToString('yyyy-MM-dd HH:mm:ss') } else { "Unknown" }
+                CreatedDateTime = if ($user.CreatedDateTime) { 
+                    try {
+                        if ($user.CreatedDateTime -is [DateTime]) {
+                            $user.CreatedDateTime.ToString('yyyy-MM-dd HH:mm:ss')
+                        } else {
+                            ([DateTime]::Parse($user.CreatedDateTime.ToString())).ToString('yyyy-MM-dd HH:mm:ss')
+                        }
+                    } catch {
+                        "Unknown"
+                    }
+                } else { "Unknown" }
                 LastSignIn = $lastSignIn
                 DaysSinceLastSignIn = $daysSinceLastSignIn
                 ReportGeneratedDate = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
